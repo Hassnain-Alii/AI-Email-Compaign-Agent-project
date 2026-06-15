@@ -35,6 +35,7 @@ const limiter = rateLimit({
   limit: 200, 
 });
 app.use('/api', limiter);
+app.get('/', (req, res) => res.send('AI Email Campaign Agent API is running...'));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/campaigns', campaignRoutes);
