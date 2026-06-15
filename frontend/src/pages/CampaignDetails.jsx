@@ -88,7 +88,10 @@ const CampaignDetails = () => {
       setFormData(prev => ({ ...prev, htmlContent: res.data.generatedEmail }));
       toast.success('AI magic complete! Content updated.');
     },
-    onError: (err) => toast.error('AI had a hiccup. Try again?')
+    onError: (err) => {
+      console.error('AI Generation Error:', err);
+      toast.error(err.response?.data?.message || 'AI had a hiccup. Try again?');
+    }
   });
 
   const sendCampaignMutation = useMutation({
@@ -133,6 +136,8 @@ const CampaignDetails = () => {
     }
   };
 
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const handleSend = async () => {
     const formatted = getFormattedData();
     
@@ -140,6 +145,10 @@ const CampaignDetails = () => {
       return toast.error('Subject line is required');
     }
     
+    if(!formData.fromEmail) {
+      return toast.error('Please select a verified sender email');
+    }
+
     if(!formData.recipientListId && (!formatted.directRecipients || formatted.directRecipients.length === 0)) {
       return toast.error('Select a list or add emails');
     }
@@ -148,13 +157,17 @@ const CampaignDetails = () => {
       return toast.error('Email is currently empty');
     }
 
-    if(confirm('Ready to launch this campaign?')) {
-      try {
-        await api.put(`/campaigns/${id}`, formatted);
-        sendCampaignMutation.mutate();
-      } catch (err) {
-        toast.error('Failed to sync before sending');
-      }
+    setShowConfirmModal(true);
+  };
+
+  const confirmAndSend = async () => {
+    setShowConfirmModal(false);
+    const formatted = getFormattedData();
+    try {
+      await api.put(`/campaigns/${id}`, formatted);
+      sendCampaignMutation.mutate();
+    } catch (err) {
+      toast.error('Failed to sync before sending');
     }
   };
 
@@ -255,8 +268,8 @@ const CampaignDetails = () => {
                     onChange={e => setFormData({...formData, fromEmail: e.target.value})}
                     className="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-lg bg-white shadow-sm"
                   >
-                    <option value="">Default (hassnainalyy@gmail.com)</option>
-                    {verifiedSenders?.filter(email => email !== 'hassnainalyy@gmail.com').map(email => (
+                    {!formData.fromEmail && <option value="">Select a sender...</option>}
+                    {verifiedSenders?.map(email => (
                       <option key={email} value={email}>{email}</option>
                     ))}
                   </select>
@@ -437,8 +450,53 @@ const CampaignDetails = () => {
               </div>
            </div>
         </div>
-
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-brand-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <Send className="h-6 w-6 text-brand-600" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg leading-6 font-bold text-gray-900">Launch Campaign?</h3>
+                    <div className="mt-2 text-sm text-gray-500 font-medium">
+                      You are about to send this campaign to your selected recipients. This action cannot be undone. Are you sure you want to proceed?
+                    </div>
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100 italic text-xs text-brand-800">
+                      " {formData.subject} "
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
+                <button
+                  type="button"
+                  onClick={confirmAndSend}
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-semibold text-white hover:bg-green-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all"
+                >
+                  Yes, Send Now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
