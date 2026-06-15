@@ -3,9 +3,10 @@ import RecipientList from '../models/RecipientList.js';
 import multer from 'multer';
 import { parse } from 'csv-parse';
 import fs from 'fs';
+import os from 'os';
 import { createObjectCsvStringifier } from 'csv-writer';
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ dest: os.tmpdir() });
 
 export const getRecipients = async (req, res) => {
   const { listId, search, page = 1, limit = 20 } = req.query;
